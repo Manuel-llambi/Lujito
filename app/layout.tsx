@@ -10,6 +10,10 @@ export const metadata = {
   description: 'Pipeline de gastos desde emails del banco',
 }
 
+// Mismo motivo que `app/dashboard/page.tsx`: el layout raíz también lee la base en cada request
+// (el indicador de pendientes de abajo) — sin esto, un build de producción podría congelarlo.
+export const dynamic = 'force-dynamic'
+
 // Raíz de composición de este layout (mismo patrón que `app/api/inngest/route.ts` y
 // `app/dashboard/page.tsx`): el único lugar de este archivo que lee `process.env`.
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
