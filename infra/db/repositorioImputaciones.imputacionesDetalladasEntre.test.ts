@@ -67,6 +67,22 @@ describe('RepositorioImputaciones.imputacionesDetalladasEntre (trabajo ad hoc /d
     expect(new Set(filas.map((f) => f.mes))).toEqual(new Set(['2026-08', '2026-09', '2026-10']))
   })
 
+  it('cada fila trae el comercio real del gasto, igual para las tres cuotas (mismo criterio que fechaGasto)', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const repositorioImputaciones = crearRepositorioImputaciones(base.pool)
+    const gasto = await crearGasto({ montoTotal: new Decimal('300.00'), cuotasTotal: 3, comercio: 'ALMACEN DON JOSE' })
+    await repositorioGastos.asignarCategoria(gasto.id, 'Comida', 'regla', null)
+    await repositorioImputaciones.reemplazarPara(gasto.id, [
+      { numeroCuota: 1, monto: new Decimal('100.00'), mes: '2026-08' },
+      { numeroCuota: 2, monto: new Decimal('100.00'), mes: '2026-09' },
+      { numeroCuota: 3, monto: new Decimal('100.00'), mes: '2026-10' },
+    ])
+
+    const filas = await repositorioImputaciones.imputacionesDetalladasEntre('2026-08', '2026-10')
+
+    expect(filas.every((f) => f.comercio === 'ALMACEN DON JOSE')).toBe(true)
+  })
+
   it('cada fila trae la fechaGasto real del gasto, igual para las tres cuotas', async () => {
     const repositorioGastos = crearRepositorioGastos(base.pool)
     const repositorioImputaciones = crearRepositorioImputaciones(base.pool)

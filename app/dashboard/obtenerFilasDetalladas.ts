@@ -11,6 +11,8 @@ import { MESES_VISIBLES_EN_DASHBOARD } from '@/app/dashboard/obtenerFilasDashboa
  * dispare un fetch nuevo: el mismo invariante que ya documenta `PantallaDashboard`. Igual que
  * `obtenerFilasDashboard`, la conversión de `Decimal` a `number` es puramente de presentación — el
  * repositorio ya entregó el monto exacto de cada imputación, esta función no suma ni redondea nada.
+ * `comercio` viaja igual que `fechaGasto` y `categoria`: una copia sin transformar, `monto` es el único
+ * campo que cruza de `Decimal` a `number` acá.
  */
 export async function obtenerFilasDetalladas(
   repositorioImputaciones: Pick<RepositorioImputaciones, 'imputacionesDetalladasEntre'>,
@@ -26,6 +28,7 @@ export async function obtenerFilasDetalladas(
     categoria: fila.categoria,
     monto: Number(fila.monto),
     fechaGasto: fila.fechaGasto,
+    comercio: fila.comercio,
     tieneSinConfirmar: fila.tieneSinConfirmar,
   }))
 }

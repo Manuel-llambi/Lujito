@@ -49,7 +49,7 @@ export function PantallaDashboard({
   const [categoriaExpandida, setCategoriaExpandida] = useState<NombreCategoria | null>(null)
 
   const mesFoco = mesesOrdenados[focoIndex] ?? null
-  const desgloseFoco = mesFoco ? resolverDesgloseMes(filas, mesFoco) : null
+  const desgloseFoco = mesFoco ? resolverDesgloseMes(filas, filasDetalladas, mesFoco) : null
   const semanasDelMes = mesFoco ? resolverSemanasDelMes(filasDetalladas, mesFoco) : []
   const diasDeSemana = semanaFocoLunes ? resolverDiasDeSemana(filasDetalladas, semanaFocoLunes) : []
   const semanaEtiqueta = semanaFocoLunes

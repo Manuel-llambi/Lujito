@@ -88,8 +88,8 @@ describe('PantallaDashboard — pestañas de granularidad con datos reales (trab
     { mes: '2026-08', categoria: 'Salidas', total: 100, tieneSinConfirmar: false },
   ]
   const FILAS_DETALLADAS_CON_DATOS: FilaImputacionDetallada[] = [
-    { mes: '2026-08', categoria: 'Comida', monto: 300, fechaGasto: new Date('2026-08-05T12:00:00.000Z'), tieneSinConfirmar: false }, // día 5 → Semana 1
-    { mes: '2026-08', categoria: 'Salidas', monto: 100, fechaGasto: new Date('2026-08-20T12:00:00.000Z'), tieneSinConfirmar: false }, // día 20 → Semana 3
+    { mes: '2026-08', categoria: 'Comida', monto: 300, fechaGasto: new Date('2026-08-05T12:00:00.000Z'), comercio: 'RESTO SUR', tieneSinConfirmar: false }, // día 5 → Semana 1
+    { mes: '2026-08', categoria: 'Salidas', monto: 100, fechaGasto: new Date('2026-08-20T12:00:00.000Z'), comercio: 'CINE NORTE', tieneSinConfirmar: false }, // día 20 → Semana 3
   ]
 
   it('la pestaña "Mes" dibuja 4 barras — las semanas del mes en foco, no los últimos 4 meses', () => {
@@ -120,5 +120,15 @@ describe('PantallaDashboard — pestañas de granularidad con datos reales (trab
     expect(screen.getByTestId('periodo-foco').textContent).not.toBe(etiquetaInicial)
     // El mes en foco (Req. 9.1/9.3, usado por el total de arriba) no se movió con la navegación de semana.
     expect(screen.getByTestId('total-acumulado')).toHaveTextContent('$ 400')
+  })
+
+  it('expandir una categoría lista sus gastos individuales con comercio, llegados desde filasDetalladas (trabajo ad hoc)', () => {
+    render(<PantallaDashboard filas={FILAS_CON_DETALLE} filasDetalladas={FILAS_DETALLADAS_CON_DATOS} cantidadPendientes={0} />)
+
+    fireEvent.click(screen.getByTestId('categoria-toggle-Comida'))
+
+    const detalleComida = screen.getByTestId('categoria-detalle-Comida')
+    expect(within(detalleComida).getByText('RESTO SUR')).toBeInTheDocument()
+    expect(within(detalleComida).queryByText('CINE NORTE')).not.toBeInTheDocument()
   })
 })
