@@ -1,0 +1,41 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens semánticos (Decision log de T42, design.md "Nota de diseño" de la superficie visual):
+ * Tailwind con tokens semánticos, nunca colores literales en los componentes. Los componentes usan
+ * las clases de utilidad que Tailwind genera a partir de estas variables (`bg-superficie`,
+ * `text-texto`, `bg-categoria-comida`, ...), nunca un valor hexadecimal embebido.
+ *
+ * Los cuatro colores de categoría coinciden a propósito con los que sembró la migración de T17
+ * (`infra/db/migraciones/0002_categorias_y_reglas.sql`): es el mismo color en el gráfico, en la
+ * bandeja y en el indicador de pendientes, tal como exige design.md ("una categoría, un color
+ * estable en todo el sistema"). Esta corrida no lee el color desde la base para pintar la UI —eso
+ * es una decisión de T43 en adelante—, así que la consistencia hoy es manual y queda anotada acá
+ * para que no diverja en silencio si alguna de las dos listas cambia.
+ */
+@theme {
+  --color-superficie: #ffffff;
+  --color-texto: #1f2937;
+  --color-acento: #2563eb;
+
+  --color-categoria-salidas: #f59e0b;
+  --color-categoria-comida: #10b981;
+  --color-categoria-extras: #8b5cf6;
+  --color-categoria-sin-categorizar: #6b7280;
+
+  /*
+   * Tokens agregados para la reconstrucción visual de `/dashboard` (trabajo ad hoc, mockup Stitch
+   * "Dashboard con Notificación Refinada" — no tracked en tasks.md). Misma convención kebab-case con
+   * prefijo `--color-` de arriba, valores tomados del mockup solo donde no chocan con un token
+   * existente:
+   * - `superficie-muted` y `texto-muted`: fondo y texto secundarios que el mockup usa para el banner,
+   *   los selectores y las etiquetas atenuadas — el sistema no tenía todavía un tono "muted" propio.
+   * - `alerta`: acento de atención para el banner de "gastos pendientes de confirmación" (Req. 7.1).
+   *   Deliberadamente NO se llama "needs-review": ese es el estado `needs_review` del dominio
+   *   (Req. 10.2), que design.md deja fuera de esta versión de la superficie visual — este token pinta
+   *   una alerta genérica de atención, no ese estado específico.
+   */
+  --color-superficie-muted: #f8fafc;
+  --color-texto-muted: #64748b;
+  --color-alerta: #ef4444;
+}
