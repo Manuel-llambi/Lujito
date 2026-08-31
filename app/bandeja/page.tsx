@@ -5,6 +5,10 @@ import { obtenerGastosPendientes } from '@/app/bandeja/obtenerGastosPendientes'
 import { confirmarGasto } from '@/app/bandeja/confirmarGasto'
 import { corregirGasto } from '@/app/bandeja/corregirGasto'
 
+// Mismo motivo que `app/dashboard/page.tsx`: sin esto, Next prerenderiza esta ruta como estática y
+// serviría en producción una única foto de la bandeja tomada en el momento del build.
+export const dynamic = 'force-dynamic'
+
 // Raíz de composición de esta ruta (mismo patrón que `app/api/inngest/route.ts`, `app/dashboard/page.tsx`
 // y `app/layout.tsx`): el único lugar de este archivo que lee `process.env`.
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
