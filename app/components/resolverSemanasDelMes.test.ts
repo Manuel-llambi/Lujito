@@ -8,6 +8,7 @@ function fila(parcial: Partial<FilaImputacionDetallada> = {}): FilaImputacionDet
     categoria: 'Comida',
     monto: 100,
     fechaGasto: new Date('2026-08-10T15:00:00.000Z'),
+    comercio: null,
     tieneSinConfirmar: false,
     ...parcial,
   }

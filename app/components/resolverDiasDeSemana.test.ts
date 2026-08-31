@@ -12,6 +12,7 @@ function fila(parcial: Partial<FilaImputacionDetallada> = {}): FilaImputacionDet
     categoria: 'Comida',
     monto: 100,
     fechaGasto: new Date('2026-08-19T15:00:00.000Z'), // lunes 2026-08-17 es el lunes de esa semana
+    comercio: null,
     tieneSinConfirmar: false,
     ...parcial,
   }

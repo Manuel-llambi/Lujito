@@ -35,13 +35,17 @@ export interface FilaDashboard {
  * Una fila-por-imputación con la fecha del gasto (trabajo ad hoc de `/dashboard`, fuera de tasks.md):
  * a diferencia de `FilaDashboard`, no agrega por mes+categoría — es el detalle que necesita el
  * bucketing por semana/día de la card "Resumen" (`resolverSemanasDelMes`/`resolverDiasDeSemana`, en
- * `app/components/`), que no puede calcularse a partir de un total ya sumado.
+ * `app/components/`), que no puede calcularse a partir de un total ya sumado. `comercio` se suma acá
+ * (trabajo ad hoc de la lista de gastos del acordeón "Categorías") con el mismo criterio que
+ * `fechaGasto`: viene de `gastos.comercio` tal cual, `null` si el parser nunca lo completó — nunca un
+ * string inventado para no dejar el campo vacío.
  */
 export interface FilaImputacionDetallada {
   mes: Mes
   categoria: Categoria
   monto: Decimal
   fechaGasto: Date
+  comercio: string | null
   tieneSinConfirmar: boolean
 }
 
@@ -126,10 +130,11 @@ export function crearRepositorioImputaciones(pool: Pool): RepositorioImputacione
         categoria: string | null
         monto: string
         fecha_gasto: Date | null
+        comercio: string | null
         sin_confirmar: boolean
       }>(
         `
-        SELECT i.mes, c.nombre AS categoria, i.monto, g.fecha_gasto, (g.confirmado_en IS NULL) AS sin_confirmar
+        SELECT i.mes, c.nombre AS categoria, i.monto, g.fecha_gasto, g.comercio, (g.confirmado_en IS NULL) AS sin_confirmar
         FROM imputaciones i
         JOIN gastos g ON g.id = i.gasto_id
         LEFT JOIN categorias c ON c.id = g.categoria_id
@@ -158,6 +163,7 @@ export function crearRepositorioImputaciones(pool: Pool): RepositorioImputacione
           categoria: fila.categoria as Categoria,
           monto: new Decimal(fila.monto),
           fechaGasto: fila.fecha_gasto,
+          comercio: fila.comercio,
           tieneSinConfirmar: fila.sin_confirmar,
         }
       })
