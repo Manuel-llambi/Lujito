@@ -62,3 +62,14 @@ export function IconoBandeja({ className }: { className?: string }) {
     </svg>
   )
 }
+
+export function IconoHabitos({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className={className} aria-hidden="true">
+      <path d="M2.5 16.5V3.5" strokeLinecap="round" />
+      <path d="M2.5 16.5h15" strokeLinecap="round" />
+      <path d="M4.5 13.5l3.5-4 2.5 2.5L16.5 6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13 6h3.5v3.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}

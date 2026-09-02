@@ -82,6 +82,20 @@ export interface RepositorioGastos {
   traerPorId(id: string): Promise<Gasto>
   /** Transición a `imputado` (Req. 10.5), la única que le falta a `estado_gasto` (T36). */
   marcarImputado(id: string): Promise<void>
+  /**
+   * Única fuente de datos de `calcularRitmoGasto` (T3) y `calcularComerciosRecurrentes` (T4): a
+   * diferencia de la categoría dominante y la variación por categoría, que leen `vista_gastos_mensuales`
+   * vía `RepositorioImputaciones.totalesPorMesYCategoria`, esos dos hallazgos necesitan
+   * `gastos.fecha_gasto` y `gastos.monto_total` directo, porque una imputación de una cuota N>1 no
+   * tiene un "día del mes" propio dentro del mes que impacta (`design.md`, "Decisiones de diseño").
+   * Rango `[desde, hasta)` — inferior inclusivo, superior exclusivo — para encadenar sin solapamiento
+   * ni hueco con `rangoDeMes` (T5). No filtra por `comercio IS NOT NULL` (Req. 2.11): esa exclusión es
+   * responsabilidad de `calcularComerciosRecurrentes`, no de esta consulta.
+   */
+  gastosEntreFechas(
+    desde: Date,
+    hasta: Date,
+  ): Promise<{ comercio: string | null; montoTotal: Decimal; fechaGasto: Date }[]>
 }
 
 interface FilaGasto {
@@ -326,6 +340,28 @@ export function crearRepositorioGastos(pool: Pool): RepositorioGastos {
 
     async marcarImputado(id) {
       await pool.query("UPDATE gastos SET estado = 'imputado' WHERE id = $1", [id])
+    },
+
+    // Consulta exacta fijada por `design.md`: rango `[desde, hasta)`, excluye `needs_review`, sin
+    // filtrar por `comercio IS NOT NULL` (Req. 2.11 — esa exclusión es responsabilidad de
+    // `calcularComerciosRecurrentes`, T4). Fuera de `needs_review`, `monto_total` y `fecha_gasto`
+    // siempre llegan completos juntos (por `crear` o `actualizarDatos`, ambos alimentados por un
+    // `GastoNormalizado` entero), así que castear a `Decimal`/`Date` no nulos es seguro acá.
+    async gastosEntreFechas(desde, hasta) {
+      const resultado = await pool.query<{ comercio: string | null; monto_total: string; fecha_gasto: Date }>(
+        `
+        SELECT comercio, monto_total, fecha_gasto
+        FROM gastos
+        WHERE estado <> 'needs_review' AND fecha_gasto >= $1 AND fecha_gasto < $2
+        ORDER BY fecha_gasto ASC
+        `,
+        [desde, hasta],
+      )
+      return resultado.rows.map((fila) => ({
+        comercio: fila.comercio,
+        montoTotal: new Decimal(fila.monto_total),
+        fechaGasto: new Date(fila.fecha_gasto),
+      }))
     },
   }
 }

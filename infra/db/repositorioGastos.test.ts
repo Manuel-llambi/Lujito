@@ -931,3 +931,164 @@ describe('RepositorioGastos.traerPorId y marcarImputado (T36)', () => {
     expect(traido.estado).toBe('imputado')
   })
 })
+
+describe('RepositorioGastos.gastosEntreFechas (T6)', () => {
+  let base: BasePostgresDeTest
+
+  beforeAll(async () => {
+    base = await crearBasePostgresDeTest()
+  })
+
+  afterAll(async () => {
+    await base.destruir()
+  })
+
+  afterEach(async () => {
+    await base.pool.query('TRUNCATE gastos, emails_crudos CASCADE')
+  })
+
+  let contador = 0
+  async function crearGasto(
+    repositorioGastos: ReturnType<typeof crearRepositorioGastos>,
+    datos: Partial<GastoNormalizado> = {},
+  ) {
+    contador += 1
+    const repositorioEmails = crearRepositorioEmails(base.pool)
+    const { id: emailId } = await repositorioEmails.guardarSiEsNuevo({
+      gmailMessageId: `msg-t6-${contador}`,
+      remitente: 'no-responder@banco-ejemplo.com.ar',
+      asunto: 'Pagaste $2.571,30',
+      headersCrudos: 'From: no-responder@banco-ejemplo.com.ar',
+      cuerpo: '<html></html>',
+      recibidoEn: new Date('2026-08-24T14:20:00.000Z'),
+    })
+    return repositorioGastos.crear(datosCompletos(datos), emailId)
+  }
+
+  // `crearParaRevision` deja los campos de datos en NULL — para un needs_review CON fecha_gasto y
+  // monto_total dentro del rango (el caso que realmente ejercita el filtro `estado <> 'needs_review'`)
+  // hace falta `actualizarDatos` después (T40), que sobreescribe los siete campos sin tocar `estado`.
+  async function crearGastoNeedsReviewConDatos(
+    repositorioGastos: ReturnType<typeof crearRepositorioGastos>,
+    datos: Partial<GastoNormalizado> = {},
+  ) {
+    contador += 1
+    const repositorioEmails = crearRepositorioEmails(base.pool)
+    const { id: emailId } = await repositorioEmails.guardarSiEsNuevo({
+      gmailMessageId: `msg-t6-nr-${contador}`,
+      remitente: 'no-responder@banco-ejemplo.com.ar',
+      asunto: 'Pagaste $2.571,30',
+      headersCrudos: 'From: no-responder@banco-ejemplo.com.ar',
+      cuerpo: '<html></html>',
+      recibidoEn: new Date('2026-08-24T14:20:00.000Z'),
+    })
+    const gasto = await repositorioGastos.crearParaRevision(emailId, 'campos_faltantes', {})
+    await repositorioGastos.actualizarDatos(gasto.id, datosCompletos(datos))
+    return gasto
+  }
+
+  it('un gasto con fecha_gasto exactamente igual a hasta NO aparece (límite superior exclusivo, Req. 2.7, 2.9)', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const hasta = new Date('2026-09-01T00:00:00.000Z')
+    await crearGasto(repositorioGastos, { fechaGasto: hasta })
+
+    const resultado = await repositorioGastos.gastosEntreFechas(new Date('2026-08-01T00:00:00.000Z'), hasta)
+
+    expect(resultado).toEqual([])
+  })
+
+  it('un gasto con fecha_gasto un milisegundo antes de hasta SÍ aparece (Req. 2.7, 2.9)', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const hasta = new Date('2026-09-01T00:00:00.000Z')
+    const fechaGasto = new Date(hasta.getTime() - 1)
+    await crearGasto(repositorioGastos, { fechaGasto })
+
+    const resultado = await repositorioGastos.gastosEntreFechas(new Date('2026-08-01T00:00:00.000Z'), hasta)
+
+    expect(resultado).toHaveLength(1)
+    expect(resultado[0]?.fechaGasto.toISOString()).toBe(fechaGasto.toISOString())
+  })
+
+  it('un gasto con fecha_gasto exactamente igual a desde SÍ aparece (límite inferior inclusivo, Req. 2.7, 2.9)', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const desde = new Date('2026-08-01T00:00:00.000Z')
+    await crearGasto(repositorioGastos, { fechaGasto: desde })
+
+    const resultado = await repositorioGastos.gastosEntreFechas(desde, new Date('2026-09-01T00:00:00.000Z'))
+
+    expect(resultado).toHaveLength(1)
+    expect(resultado[0]?.fechaGasto.toISOString()).toBe(desde.toISOString())
+  })
+
+  it('el resultado viene ordenado por fecha_gasto ascendente (Req. 2.7, 2.9)', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const desde = new Date('2026-08-01T00:00:00.000Z')
+    const hasta = new Date('2026-09-01T00:00:00.000Z')
+    const fechaTardia = new Date('2026-08-20T00:00:00.000Z')
+    const fechaTemprana = new Date('2026-08-05T00:00:00.000Z')
+    const fechaMedia = new Date('2026-08-12T00:00:00.000Z')
+    await crearGasto(repositorioGastos, { fechaGasto: fechaTardia, comercio: 'TARDIO' })
+    await crearGasto(repositorioGastos, { fechaGasto: fechaTemprana, comercio: 'TEMPRANO' })
+    await crearGasto(repositorioGastos, { fechaGasto: fechaMedia, comercio: 'MEDIO' })
+
+    const resultado = await repositorioGastos.gastosEntreFechas(desde, hasta)
+
+    expect(resultado.map((g) => g.comercio)).toEqual(['TEMPRANO', 'MEDIO', 'TARDIO'])
+  })
+
+  it('un gasto en needs_review dentro del rango NO aparece, aunque su fecha_gasto esté en rango (Req. 2.7, 2.9)', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const desde = new Date('2026-08-01T00:00:00.000Z')
+    const hasta = new Date('2026-09-01T00:00:00.000Z')
+    await crearGastoNeedsReviewConDatos(repositorioGastos, { fechaGasto: new Date('2026-08-15T00:00:00.000Z') })
+
+    const resultado = await repositorioGastos.gastosEntreFechas(desde, hasta)
+
+    expect(resultado).toEqual([])
+  })
+
+  it('un gasto con comercio null dentro del rango SÍ aparece, con comercio en null (Req. 2.11)', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const desde = new Date('2026-08-01T00:00:00.000Z')
+    const hasta = new Date('2026-09-01T00:00:00.000Z')
+    // `GastoNormalizado.comercio` es `string`, nunca `null` — un gasto sin comercio solo puede
+    // llegar por la vía de `needs_review`/`crearParaRevision`, que no sirve acá porque esta consulta
+    // los excluye. El único camino para dejar un gasto NO needs_review con `comercio` en `NULL` en
+    // este test es un INSERT directo, igual que ya hacen los tests de restricciones de T18 más arriba.
+    contador += 1
+    const repositorioEmails = crearRepositorioEmails(base.pool)
+    const { id: emailId } = await repositorioEmails.guardarSiEsNuevo({
+      gmailMessageId: `msg-t6-sin-comercio-${contador}`,
+      remitente: 'no-responder@banco-ejemplo.com.ar',
+      asunto: 'Pagaste $2.571,30',
+      headersCrudos: 'From: no-responder@banco-ejemplo.com.ar',
+      cuerpo: '<html></html>',
+      recibidoEn: new Date('2026-08-24T14:20:00.000Z'),
+    })
+    await base.pool.query(
+      `INSERT INTO gastos (email_id, monto_total, comercio, fecha_gasto, cuotas_total, estado)
+       VALUES ($1, $2, NULL, $3, $4, 'extraido')`,
+      [emailId, '2571.30', new Date('2026-08-15T00:00:00.000Z'), 1],
+    )
+
+    const resultado = await repositorioGastos.gastosEntreFechas(desde, hasta)
+
+    expect(resultado).toHaveLength(1)
+    expect(resultado[0]?.comercio).toBeNull()
+  })
+
+  it('montoTotal es una instancia de Decimal, no number ni el string crudo de la columna', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const desde = new Date('2026-08-01T00:00:00.000Z')
+    const hasta = new Date('2026-09-01T00:00:00.000Z')
+    await crearGasto(repositorioGastos, {
+      fechaGasto: new Date('2026-08-15T00:00:00.000Z'),
+      montoTotal: new Decimal('2571.30'),
+    })
+
+    const resultado = await repositorioGastos.gastosEntreFechas(desde, hasta)
+
+    expect(resultado[0]?.montoTotal).toBeInstanceOf(Decimal)
+    expect(resultado[0]?.montoTotal.equals(new Decimal('2571.30'))).toBe(true)
+  })
+})

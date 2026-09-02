@@ -6,9 +6,7 @@ import { obtenerFilasDashboard } from '@/app/dashboard/obtenerFilasDashboard'
 import { obtenerFilasDetalladas } from '@/app/dashboard/obtenerFilasDetalladas'
 import { obtenerCantidadPendientes } from '@/app/obtenerCantidadPendientes'
 
-// Sin esto, Next prerenderiza esta ruta como estática en `next build` (no hay ninguna API dinámica
-// que se lo impida por sí sola) y serviría en producción una única foto de la base tomada en el
-// momento del build, nunca actualizada. `next dev` nunca mostró el problema porque ahí no prerenderiza.
+
 export const dynamic = 'force-dynamic'
 
 // Raíz de composición de esta ruta (Decision log de T29, mismo patrón en `app/api/inngest/route.ts`):

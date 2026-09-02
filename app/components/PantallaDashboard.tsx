@@ -86,7 +86,7 @@ export function PantallaDashboard({
 
   return (
     <div className="relative mx-auto min-h-screen max-w-md bg-superficie-muted pb-24">
-      <TopAppBar titulo="Lujito" />
+      <TopAppBar />
 
       <main className="flex flex-col gap-8 p-4">
         <BannerPendientes cantidad={cantidadPendientes} hrefRevisar="/bandeja" />
@@ -128,7 +128,7 @@ export function PantallaDashboard({
         )}
       </main>
 
-      <BottomNavBar cantidadPendientes={cantidadPendientes} />
+      <BottomNavBar cantidadPendientes={cantidadPendientes} activa="inicio" />
     </div>
   )
 }
