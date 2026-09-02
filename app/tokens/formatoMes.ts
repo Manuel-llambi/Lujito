@@ -32,3 +32,17 @@ export function nombreMes(mes: Mes): string {
 export function nombreMesCorto(mes: Mes): string {
   return nombreMes(mes).slice(0, 3)
 }
+
+/**
+ * Fecha corta de un gasto individual ("24 Ago"), para la lista de gastos del acordeón "Categorías"
+ * (trabajo ad hoc). Recibe una fecha civil `AAAA-MM-DD` ya resuelta (`resolverFechaEfectiva`) y la
+ * parsea por string, mismo criterio que `formatearRangoSemana`: nunca vía `Date`, sin conversión de
+ * huso horario posible sobre una fecha que ya es civil.
+ */
+export function formatearFechaCorta(fecha: string): string {
+  const [anio, mes, dia] = fecha.split('-')
+  const mesAAAAMM = `${anio}-${mes}` as Mes
+  const diaSinCero = String(Number(dia))
+
+  return `${diaSinCero} ${nombreMesCorto(mesAAAAMM)}`
+}

@@ -29,6 +29,7 @@ describe('obtenerFilasDetalladas (trabajo ad hoc /dashboard)', () => {
         categoria: 'Comida',
         monto: new Decimal('1234.56'),
         fechaGasto,
+        comercio: 'ALMACEN DON JOSE',
         tieneSinConfirmar: true,
       },
     ]
@@ -41,7 +42,30 @@ describe('obtenerFilasDetalladas (trabajo ad hoc /dashboard)', () => {
     const filas = await obtenerFilasDetalladas(repositorioImputaciones, new Date('2026-08-27T02:00:00.000Z'))
 
     expect(filas).toEqual([
-      { mes: '2026-08', categoria: 'Comida', monto: 1234.56, fechaGasto, tieneSinConfirmar: true },
+      {
+        mes: '2026-08',
+        categoria: 'Comida',
+        monto: 1234.56,
+        fechaGasto,
+        comercio: 'ALMACEN DON JOSE',
+        tieneSinConfirmar: true,
+      },
     ])
+  })
+
+  it('propaga comercio sin transformar, incluido el caso null (parser que nunca lo completó)', async () => {
+    const fechaGasto = new Date('2026-08-15T14:14:00.000Z')
+    const filasSimuladas: FilaImputacionDetallada[] = [
+      { mes: '2026-08', categoria: 'Comida', monto: new Decimal('10.00'), fechaGasto, comercio: null, tieneSinConfirmar: false },
+    ]
+    const repositorioImputaciones: Pick<RepositorioImputaciones, 'imputacionesDetalladasEntre'> = {
+      async imputacionesDetalladasEntre() {
+        return filasSimuladas
+      },
+    }
+
+    const filas = await obtenerFilasDetalladas(repositorioImputaciones, new Date('2026-08-27T02:00:00.000Z'))
+
+    expect(filas[0]?.comercio).toBeNull()
   })
 })
