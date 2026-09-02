@@ -34,8 +34,14 @@
    *   Deliberadamente NO se llama "needs-review": ese es el estado `needs_review` del dominio
    *   (Req. 10.2), que design.md deja fuera de esta versión de la superficie visual — este token pinta
    *   una alerta genérica de atención, no ese estado específico.
+   *
+   * `alerta` corregido de `#ef4444` a `#dc2626` (revisión visual/UX): el rojo original da 3.76:1 sobre
+   * `superficie`/`superficie-muted` para el texto de `BannerPendientes` (`text-[10px] font-bold`, no
+   * clasifica como "texto grande"), por debajo del mínimo WCAG AA de 4.5:1. `#dc2626` da ~4.83:1 y
+   * sigue leyéndose como el mismo rojo de alerta; el uso decorativo (`bg-alerta`) no tiene requisito de
+   * contraste pero cambia igual porque es el mismo token.
    */
   --color-superficie-muted: #f8fafc;
   --color-texto-muted: #64748b;
-  --color-alerta: #ef4444;
+  --color-alerta: #dc2626;
 }

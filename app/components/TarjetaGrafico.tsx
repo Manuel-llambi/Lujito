@@ -84,8 +84,9 @@ export function TarjetaGrafico({
             key={g}
             type="button"
             data-testid={`granularidad-${g}`}
+            aria-pressed={granularidad === g}
             onClick={() => onCambiarGranularidad(g)}
-            className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+            className={`min-h-9 flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${
               granularidad === g ? 'bg-superficie text-acento shadow-sm' : 'text-texto-muted'
             }`}
           >
@@ -94,13 +95,16 @@ export function TarjetaGrafico({
         ))}
       </div>
 
-      <div className="flex items-center justify-between px-2">
+      <div className="flex items-center justify-between">
+        {/* Botones ‹› (revisión visual/UX): antes el área táctil era el ícono desnudo (20×20px, muy
+            por debajo del mínimo recomendado de 44×44px). El padding suma el área sin agrandar el
+            ícono, y el fondo redondeado da feedback visual al hover/focus. */}
         <button
           type="button"
           aria-label="Período anterior"
           disabled={!puedeIrAnteriorActivo}
           onClick={() => navegar(-1)}
-          className="text-texto-muted hover:text-texto disabled:opacity-30"
+          className="rounded-full p-3 text-texto-muted transition-colors hover:bg-superficie-muted hover:text-texto disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <IconoChevron direccion="izquierda" className="h-5 w-5" />
         </button>
@@ -112,7 +116,7 @@ export function TarjetaGrafico({
           aria-label="Período siguiente"
           disabled={!puedeIrSiguienteActivo}
           onClick={() => navegar(1)}
-          className="text-texto-muted hover:text-texto disabled:opacity-30"
+          className="rounded-full p-3 text-texto-muted transition-colors hover:bg-superficie-muted hover:text-texto disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <IconoChevron direccion="derecha" className="h-5 w-5" />
         </button>
@@ -124,7 +128,13 @@ export function TarjetaGrafico({
         <GraficoTorta desglose={desgloseFoco} />
       )}
 
-      <Leyenda />
+      {/* La torta no queda etiquetada con nada propio: el `conic-gradient` es un solo `div` sin marcado
+          por segmento, así que el color es la única señal de qué porción es cuál. La leyenda es el
+          fallback de accesibilidad (guía de la skill ui-ux-pro-max, dominio chart: "no depender solo
+          del color; etiquetar siempre con %") — se le pasa el desglose únicamente en modo torta, para
+          que muestre el porcentaje junto a cada categoría; en modo barras cada segmento ya se etiqueta
+          a sí mismo (`pct >= 12` en `GraficoBarras`), así que la leyenda no repite el número. */}
+      <Leyenda desglose={tipoGrafico === 'torta' ? desgloseFoco : null} />
     </section>
   )
 }
@@ -146,8 +156,8 @@ function BotonIcono({
       aria-label={etiqueta}
       aria-pressed={activo}
       onClick={onClick}
-      className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
-        activo ? 'bg-superficie text-acento shadow-sm' : 'text-texto-muted'
+      className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+        activo ? 'bg-superficie text-acento shadow-sm' : 'text-texto-muted hover:text-texto'
       }`}
     >
       {children}
@@ -220,15 +230,20 @@ function GraficoTorta({ desglose }: { desglose: DesgloseMes | null }) {
   )
 }
 
-function Leyenda() {
+function Leyenda({ desglose }: { desglose: DesgloseMes | null }) {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-semibold text-texto-muted">
-      {ORDEN_CATEGORIAS.map((categoria) => (
-        <div key={categoria} className="flex items-center gap-1.5">
-          <div className={`h-2.5 w-2.5 rounded-sm ${CLASE_COLOR_CATEGORIA[categoria]}`} />
-          {categoria}
-        </div>
-      ))}
+      {ORDEN_CATEGORIAS.map((categoria) => {
+        const dato = desglose?.categorias.find((c) => c.categoria === categoria)
+
+        return (
+          <div key={categoria} className="flex items-center gap-1.5">
+            <div className={`h-2.5 w-2.5 rounded-sm ${CLASE_COLOR_CATEGORIA[categoria]}`} />
+            {categoria}
+            {dato && dato.pct > 0 && <span className="text-texto">({dato.pct}%)</span>}
+          </div>
+        )
+      })}
     </div>
   )
 }
