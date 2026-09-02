@@ -7,10 +7,6 @@ import { corregirGasto } from '@/app/bandeja/corregirGasto'
 import { TopAppBar } from '@/app/components/TopAppBar'
 import { BottomNavBar } from '@/app/components/BottomNavBar'
 
-// Lee datos en vivo de la base en cada request — nunca prerenderizable en build (ahí no hay Postgres
-// disponible, ECONNREFUSED 127.0.0.1:5432). Mismo fix en /dashboard y /habitos.
-export const dynamic = 'force-dynamic'
-
 // Mismo motivo que `app/dashboard/page.tsx`: sin esto, Next prerenderiza esta ruta como estática y
 // serviría en producción una única foto de la bandeja tomada en el momento del build.
 export const dynamic = 'force-dynamic'
