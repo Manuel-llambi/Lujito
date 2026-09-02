@@ -7,6 +7,10 @@ import { corregirGasto } from '@/app/bandeja/corregirGasto'
 import { TopAppBar } from '@/app/components/TopAppBar'
 import { BottomNavBar } from '@/app/components/BottomNavBar'
 
+// Lee datos en vivo de la base en cada request — nunca prerenderizable en build (ahí no hay Postgres
+// disponible, ECONNREFUSED 127.0.0.1:5432). Mismo fix en /dashboard y /habitos.
+export const dynamic = 'force-dynamic'
+
 // Raíz de composición de esta ruta (mismo patrón que `app/api/inngest/route.ts`, `app/dashboard/page.tsx`
 // y `app/layout.tsx`): el único lugar de este archivo que lee `process.env`.
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })

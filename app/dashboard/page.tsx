@@ -6,6 +6,10 @@ import { obtenerFilasDashboard } from '@/app/dashboard/obtenerFilasDashboard'
 import { obtenerFilasDetalladas } from '@/app/dashboard/obtenerFilasDetalladas'
 import { obtenerCantidadPendientes } from '@/app/obtenerCantidadPendientes'
 
+// Lee datos en vivo de la base en cada request — nunca prerenderizable en build (ahí no hay Postgres
+// disponible, ECONNREFUSED 127.0.0.1:5432). Mismo fix en /bandeja y /habitos.
+export const dynamic = 'force-dynamic'
+
 // Raíz de composición de esta ruta (Decision log de T29, mismo patrón en `app/api/inngest/route.ts`):
 // el único lugar de este archivo que lee `process.env`.
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
