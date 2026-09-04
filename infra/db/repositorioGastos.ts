@@ -3,6 +3,7 @@ import type { Pool } from 'pg'
 import type { GastoNormalizado, MotivoRevision } from '@/dominio/normalizacion/normalizarAviso'
 import type { TipoTarjeta } from '@/dominio/parseo/parsearAvisoSantander'
 import type { Categoria } from '@/dominio/categorizacion/categorizarPorReglas'
+import type { NuevoGastoManual } from '@/dominio/gastos/nuevoGastoManual'
 
 /**
  * `design.md` usa `origen_categoria` como tipo de la base pero nunca lo declara del lado de
@@ -23,7 +24,11 @@ export type EstadoGasto = 'pendiente' | 'extraido' | 'categorizado' | 'imputado'
  */
 export interface Gasto {
   id: string
-  emailId: string
+  // `string | null` desde T2 (Req. 4.1): un alta manual (`crearManual`) crea el gasto sin ningún
+  // email de origen. Los siete métodos preexistentes siguen devolviendo `emailId` no nulo en la
+  // práctica (vienen de emails reales) — este es un ensanchamiento de tipo, no un cambio de
+  // comportamiento para ningún llamador existente.
+  emailId: string | null
   montoTotal: Decimal | null
   moneda: string
   comercio: string | null
@@ -71,6 +76,14 @@ export interface RepositorioGastos {
    * mismos métodos cuando el llamador re-ejecuta categorizar/imputar después, no este.
    */
   actualizarDatos(id: string, datos: GastoNormalizado): Promise<void> // Req. 10.3
+  /**
+   * Inserta un gasto de alta manual (Req. 4.1, T2): `email_id NULL`, `categoria_id` resuelto contra
+   * el nombre de `categorias`, `categoria_origen 'usuario'` y `estado 'categorizado'` directo — nunca
+   * pasa por `'pendiente'` ni `'extraido'`, porque un alta manual ya nace categorizada por el
+   * usuario. La imputación y el paso a `imputado` los orquesta `ejecutarCrearGastoManual` (T3), no
+   * este método.
+   */
+  crearManual(datos: NuevoGastoManual): Promise<Gasto>
   confirmar(id: string, categoria: Categoria): Promise<void> // Req. 7.3, 7.4
   pendientesDeConfirmacion(): Promise<Gasto[]> // Req. 7.1, 7.2
   /**
@@ -100,7 +113,7 @@ export interface RepositorioGastos {
 
 interface FilaGasto {
   id: string
-  email_id: string
+  email_id: string | null
   monto_total: string | null
   moneda: string
   comercio: string | null
@@ -143,7 +156,11 @@ function filaAGasto(fila: FilaGasto): Gasto {
   }
 }
 
-export function crearRepositorioGastos(pool: Pool): RepositorioGastos {
+// `Pick<Pool, 'query'>` en vez de `Pool` completo: permite construir este repositorio tanto con el
+// `Pool` compartido de la aplicación como con un `PoolClient` de una transacción (`ejecutarEnTransaccion`,
+// trabajo ad hoc del incidente de atomicidad en `confirmarGasto`/`corregirGasto`) — `PoolClient.query`
+// tiene la misma forma que `Pool.query`, así que ninguna otra parte de este archivo necesita cambiar.
+export function crearRepositorioGastos(pool: Pick<Pool, 'query'>): RepositorioGastos {
   return {
     // `datos` es un `GastoNormalizado` completo —sus siete campos son no nulos—, así que este método
     // no puede persistir un gasto en `needs_review` (Decision log de T22, hueco escalado que T32
@@ -248,6 +265,37 @@ export function crearRepositorioGastos(pool: Pool): RepositorioGastos {
           datos.cuotasTotal,
         ],
       )
+    },
+
+    // Igual que `crear`/`crearParaRevision`, envuelve el INSERT en un CTE para reutilizar
+    // `COLUMNAS_GASTO`/`filaAGasto`, sin introducir una segunda forma de fila (Decision log de T2).
+    // `email_id` siempre `NULL` — un alta manual no tiene ningún email de origen (Req. 4.1). El
+    // `estado` va directo a `'categorizado'`, nunca `'pendiente'` ni `'extraido'`: el usuario ya
+    // eligió la categoría al completar el formulario, así que no hay nada más que categorizar.
+    async crearManual(datos) {
+      const resultado = await pool.query<FilaGasto>(
+        `
+        WITH g AS (
+          INSERT INTO gastos (
+            email_id, monto_total, moneda, comercio, fecha_gasto, categoria_id, categoria_origen,
+            estado, confirmado_en
+          ) VALUES (
+            NULL, $1, 'ARS', $2, $3, (SELECT id FROM categorias WHERE nombre = $4), 'usuario',
+            'categorizado', now()
+          )
+          RETURNING *
+        )
+        SELECT ${COLUMNAS_GASTO}
+        FROM g LEFT JOIN categorias c ON c.id = g.categoria_id
+        `,
+        [datos.montoTotal.toString(), datos.comercio, datos.fechaGasto, datos.categoria],
+      )
+
+      const fila = resultado.rows[0]
+      if (!fila) {
+        throw new Error('crearManual: la consulta no devolvió ninguna fila')
+      }
+      return filaAGasto(fila)
     },
 
     // El origen decide `confirmado_en` (Req. 5.3, 6.3): `regla` confirma en el acto, `ia` queda sin
