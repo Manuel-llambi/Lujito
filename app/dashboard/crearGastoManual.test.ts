@@ -3,8 +3,23 @@ import type { Pool, PoolClient } from 'pg'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { crearBasePostgresDeTest, type BasePostgresDeTest } from '@/infra/db/testUtils/basePostgresDeTest'
 import { crearRepositorioImputaciones } from '@/infra/db/repositorioImputaciones'
-import { ejecutarCrearGastoManual } from '@/app/dashboard/crearGastoManual'
+import { ejecutarCrearGastoManual, validarDatosGastoManual } from '@/app/dashboard/crearGastoManual'
 import type { NuevoGastoManual } from '@/dominio/gastos/nuevoGastoManual'
+
+function formDataCompleto(campos: Record<string, string> = {}): FormData {
+  const formData = new FormData()
+  const valoresPorDefecto: Record<string, string> = {
+    monto: '$1.234,56',
+    comercio: 'Kiosco',
+    fecha: '2026-08-24',
+    categoria: 'Comida',
+    ...campos,
+  }
+  for (const [clave, valor] of Object.entries(valoresPorDefecto)) {
+    formData.set(clave, valor)
+  }
+  return formData
+}
 
 function datosCompletos(parcial: Partial<NuevoGastoManual> = {}): NuevoGastoManual {
   return {
@@ -132,5 +147,56 @@ describe('ejecutarCrearGastoManual (T3, Req. 3.4, 4.2, 4.3, 4.4, 5.2)', () => {
     const fila = filas.find((f) => f.categoria === 'Comida')
     expect(fila?.total.equals(new Decimal('300.00'))).toBe(true)
     expect(gasto.categoria).toBe('Comida')
+  })
+})
+
+describe('validarDatosGastoManual (T4, Req. 2.1, 2.2, 2.4, 3.1, 3.2, 3.3, 3.4)', () => {
+  it('con datos válidos, arma { datos } con el Decimal de normalizarMonto, comercio y categoría (Req. 4.1 vía T2)', () => {
+    const resultado = validarDatosGastoManual(formDataCompleto())
+
+    expect('datos' in resultado).toBe(true)
+    if ('datos' in resultado) {
+      expect(resultado.datos.montoTotal.equals(new Decimal('1234.56'))).toBe(true)
+      expect(resultado.datos.comercio).toBe('Kiosco')
+      expect(resultado.datos.categoria).toBe('Comida')
+    }
+  })
+
+  it.each([
+    ['vacío', ''],
+    ['no numérico', 'no es un monto'],
+    ['cero', '$0,00'],
+  ])('con un monto %s, devuelve { error } y no arma { datos } (Req. 2.1, 3.1)', (_caso, monto) => {
+    const resultado = validarDatosGastoManual(formDataCompleto({ monto }))
+
+    expect('error' in resultado).toBe(true)
+    expect('datos' in resultado).toBe(false)
+  })
+
+  it.each([
+    ['vacío', ''],
+    ['solo espacios', '   '],
+  ])('con un comercio %s, devuelve { error } y no arma { datos } (Req. 2.2, 3.2)', (_caso, comercio) => {
+    const resultado = validarDatosGastoManual(formDataCompleto({ comercio }))
+
+    expect('error' in resultado).toBe(true)
+    expect('datos' in resultado).toBe(false)
+  })
+
+  it('con categoría ausente, devuelve { error } y no arma { datos } (Req. 2.4, 3.3)', () => {
+    const formData = formDataCompleto()
+    formData.delete('categoria')
+
+    const resultado = validarDatosGastoManual(formData)
+
+    expect('error' in resultado).toBe(true)
+    expect('datos' in resultado).toBe(false)
+  })
+
+  it('con una categoría fuera de CATEGORIAS_MANUAL, devuelve { error } y no arma { datos } (Req. 2.4, 3.3)', () => {
+    const resultado = validarDatosGastoManual(formDataCompleto({ categoria: 'Sin categorizar' }))
+
+    expect('error' in resultado).toBe(true)
+    expect('datos' in resultado).toBe(false)
   })
 })

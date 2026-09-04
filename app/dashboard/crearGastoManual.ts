@@ -1,9 +1,13 @@
+import { TZDate } from '@date-fns/tz'
 import { Pool } from 'pg'
 import { ejecutarEnTransaccion } from '@/infra/db/ejecutarEnTransaccion'
 import { crearRepositorioGastos } from '@/infra/db/repositorioGastos'
 import type { Gasto } from '@/infra/db/repositorioGastos'
 import { dividirEnCuotas } from '@/dominio/imputacion/dividirEnCuotas'
 import { mesDe } from '@/dominio/imputacion/mesDe'
+import { ZONA_REFERENCIA } from '@/dominio/normalizacion/componerFechaGasto'
+import { normalizarMonto } from '@/dominio/normalizacion/normalizarMonto'
+import { CATEGORIAS_MANUAL, type Categoria } from '@/dominio/categorizacion/categorizarPorReglas'
 import type { NuevoGastoManual } from '@/dominio/gastos/nuevoGastoManual'
 
 /**
@@ -44,3 +48,66 @@ export async function ejecutarCrearGastoManual(pool: Pool, datos: NuevoGastoManu
     return { ...gasto, estado: 'imputado' }
   })
 }
+
+const PATRON_FECHA_INPUT = /^(\d{4})-(\d{2})-(\d{2})$/
+
+/**
+ * Parsea el valor de un `<input type="date">` (`AAAA-MM-DD`, Req. 2.3) como una hora de pared en
+ * `ZONA_REFERENCIA` — mismo espíritu que `componerFechaGasto` (Req. 3.3 del spec de pipeline por
+ * email): construirla con `TZDate` en vez de `new Date('AAAA-MM-DD')` evita que `mesDe` (que SÍ lee
+ * la hora en `ZONA_REFERENCIA`) calcule el mes anterior para el día 1 de un mes — `new Date` sobre un
+ * string de solo fecha se interpreta como medianoche UTC, que son las 21:00 del día anterior en
+ * Buenos Aires (UTC-3). Devuelve `null` si el texto no tiene forma `AAAA-MM-DD`.
+ */
+function parsearFechaInput(texto: string): Date | null {
+  const coincidencia = PATRON_FECHA_INPUT.exec(texto)
+  if (!coincidencia) {
+    return null
+  }
+  const [, anioTexto, mesTexto, diaTexto] = coincidencia
+  const instante = new TZDate(Number(anioTexto), Number(mesTexto) - 1, Number(diaTexto), 12, 0, 0, ZONA_REFERENCIA)
+  return new Date(instante.getTime())
+}
+
+function esCategoriaManual(valor: string): valor is (typeof CATEGORIAS_MANUAL)[number] {
+  return (CATEGORIAS_MANUAL as readonly string[]).includes(valor)
+}
+
+/**
+ * Valida el `FormData` del alta manual y arma el `NuevoGastoManual` listo para
+ * `ejecutarCrearGastoManual` (Req. 2.1, 2.2, 2.4, 3.1, 3.2, 3.3; T4). Función pura: no recibe ni toca
+ * ningún repositorio ni `Pool`, así que la garantía de "ningún dato queda escrito" ante un error de
+ * validación (Req. 3.4, mitad de validación) queda probada por construcción — la mitad de rollback
+ * transaccional ante una falla a mitad de la transacción ya iniciada la cubre `ejecutarCrearGastoManual`
+ * (T3). Ante el primer campo inválido devuelve `{ error }` sin seguir validando los siguientes, en el
+ * orden monto → comercio → categoría que fija `tasks.md` (T4).
+ */
+export function validarDatosGastoManual(formData: FormData): { datos: NuevoGastoManual } | { error: string } {
+  const montoTexto = String(formData.get('monto') ?? '')
+  const monto = normalizarMonto(montoTexto)
+  if (monto === null || !monto.greaterThan(0)) {
+    return { error: 'Ingresá un monto válido y mayor a cero, en formato ARS (ej. $1.234,56).' }
+  }
+
+  const comercio = String(formData.get('comercio') ?? '').trim()
+  if (comercio === '') {
+    return { error: 'Ingresá el nombre del comercio.' }
+  }
+
+  const categoriaTexto = String(formData.get('categoria') ?? '')
+  if (!esCategoriaManual(categoriaTexto)) {
+    return { error: 'Elegí una categoría (Salidas, Comida o Extras).' }
+  }
+  const categoria = categoriaTexto as Categoria
+
+  const fechaTexto = String(formData.get('fecha') ?? '')
+  const fechaGasto = parsearFechaInput(fechaTexto) ?? new Date()
+
+  return { datos: { montoTotal: monto, comercio, fechaGasto, categoria } }
+}
+
+/**
+ * `useActionState(crearGastoManual, null)` en `ModalNuevoGasto` (T5) usa esta forma: `null` es "sin
+ * error" (éxito o estado inicial), `{ error }` es el mensaje a mostrar inline sin cerrar el modal.
+ */
+export type EstadoFormularioGastoManual = { error: string } | null

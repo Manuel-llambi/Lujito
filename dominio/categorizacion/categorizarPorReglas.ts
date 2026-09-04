@@ -13,6 +13,12 @@ export const CATEGORIAS_INFERIBLES = ['Salidas', 'Comida', 'Extras'] as const
 // aparecer en ninguna de las dos: no es algo que se elija, es la ausencia de propuesta.
 export const CATEGORIAS_CORREGIBLES = [...CATEGORIAS_INFERIBLES, 'Descartar'] as const
 
+// Categorías ofrecidas por el `<select>` del alta manual (Req. 2.4, 2.5, spec
+// `2026-09-03-alta-manual-de-gastos`): mismo conjunto que `CATEGORIAS_INFERIBLES` — un alta manual
+// nunca puede terminar en "Sin categorizar" (el usuario siempre elige) ni en "Descartar" (destino
+// exclusivo de la corrección en /bandeja). Alias deliberado, no un array nuevo.
+export const CATEGORIAS_MANUAL = CATEGORIAS_INFERIBLES
+
 export interface Regla {
   id: string
   patronComercio: string
