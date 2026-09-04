@@ -1,9 +1,18 @@
 // @vitest-environment jsdom
 import { render, screen, within, fireEvent } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { PantallaDashboard } from '@/app/components/PantallaDashboard'
 import type { FilaDashboard } from '@/app/components/GraficoMensual'
 import type { FilaImputacionDetallada } from '@/app/components/desgloseBucket'
+
+// `PantallaDashboard` monta `ModalNuevoGasto` (T5), que importa la Server Action real
+// `crearGastoManual` de un módulo hermano (no recibida por props). Se mockea acá con el mismo
+// espíritu que `ModalNuevoGasto.test.tsx` — este archivo solo verifica el wiring del FAB (Req. 1.1,
+// 1.2: el modal se abre/cierra como estado de React), no el comportamiento de la Server Action, que
+// ya está cubierto por sus propios tests (T3/T4).
+vi.mock('@/app/dashboard/crearGastoManual', () => ({
+  crearGastoManual: vi.fn(),
+}))
 
 const FILAS: FilaDashboard[] = [
   { mes: '2026-07', categoria: 'Salidas', total: 100, tieneSinConfirmar: false },
@@ -130,5 +139,38 @@ describe('PantallaDashboard — pestañas de granularidad con datos reales (trab
     const detalleComida = screen.getByTestId('categoria-detalle-Comida')
     expect(within(detalleComida).getByText('RESTO SUR')).toBeInTheDocument()
     expect(within(detalleComida).queryByText('CINE NORTE')).not.toBeInTheDocument()
+  })
+})
+
+describe('PantallaDashboard — FAB de alta manual (Req. 1.1, 1.2, T6)', () => {
+  it('muestra el botón flotante para agregar un gasto (Req. 1.1)', () => {
+    render(<PantallaDashboard filas={FILAS} filasDetalladas={FILAS_DETALLADAS} cantidadPendientes={0} />)
+
+    expect(screen.getByTestId('fab-nuevo-gasto')).toBeInTheDocument()
+  })
+
+  it('tocar el FAB abre el modal sobre el dashboard, sin navegar ni desmontar el resto del árbol (Req. 1.2)', () => {
+    render(<PantallaDashboard filas={FILAS} filasDetalladas={FILAS_DETALLADAS} cantidadPendientes={0} />)
+
+    expect(screen.queryByTestId('modal-nuevo-gasto')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('fab-nuevo-gasto'))
+
+    expect(screen.getByTestId('modal-nuevo-gasto')).toBeInTheDocument()
+    // El resto del árbol sigue montado, sin remount: totales, navegación inferior y categorías.
+    expect(screen.getByTestId('total-acumulado')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-inicio')).toBeInTheDocument()
+    expect(screen.getByTestId('categoria-toggle-Comida')).toBeInTheDocument()
+  })
+
+  it('cerrar el modal desde "Cancelar" lo saca del DOM sin dejar el FAB inutilizable', () => {
+    render(<PantallaDashboard filas={FILAS} filasDetalladas={FILAS_DETALLADAS} cantidadPendientes={0} />)
+
+    fireEvent.click(screen.getByTestId('fab-nuevo-gasto'))
+    expect(screen.getByTestId('modal-nuevo-gasto')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('cancelar-nuevo-gasto'))
+
+    expect(screen.queryByTestId('modal-nuevo-gasto')).not.toBeInTheDocument()
   })
 })
