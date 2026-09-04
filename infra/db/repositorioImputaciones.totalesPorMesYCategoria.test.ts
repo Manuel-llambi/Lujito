@@ -294,6 +294,26 @@ describe('RepositorioImputaciones.totalesPorMesYCategoria y vista_gastos_mensual
     expect(filas[0]?.mes.length).toBe(7)
   })
 
+  it('un gasto categorizado Descartar queda excluido del total mensual, aunque tenga imputaciones escritas (trabajo ad hoc, feature "Descartar")', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const repositorioImputaciones = crearRepositorioImputaciones(base.pool)
+    const descartado = await crearGasto({ montoTotal: new Decimal('900.00') })
+    await repositorioGastos.asignarCategoria(descartado.id, 'Descartar', 'usuario', null)
+    await repositorioImputaciones.reemplazarPara(descartado.id, [
+      { numeroCuota: 1, monto: new Decimal('900.00'), mes: '2026-08' },
+    ])
+
+    const filas = await repositorioImputaciones.totalesPorMesYCategoria('2026-08', '2026-08')
+
+    expect(filas.find((f) => f.categoria === 'Descartar')).toBeUndefined()
+
+    const conteoImputaciones = await base.pool.query(
+      'SELECT count(*)::text AS count FROM imputaciones WHERE gasto_id = $1',
+      [descartado.id],
+    )
+    expect(conteoImputaciones.rows[0]?.count).toBe('1') // exclusión de la vista, no borrado de filas
+  })
+
   it('andamiaje: la migración crea vista_gastos_mensuales y volver a correrla no falla', async () => {
     const { aplicarMigraciones } = await import('@/infra/db/migrar')
     await expect(aplicarMigraciones(base.pool)).resolves.not.toThrow()

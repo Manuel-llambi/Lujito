@@ -49,12 +49,12 @@ describe('migración de categorias y reglas_categoria', () => {
     await base.destruir()
   })
 
-  it('categorias contiene exactamente las cuatro categorías, cada una con color no vacío', async () => {
+  it('categorias contiene exactamente las cinco categorías (las cuatro originales más Descartar), cada una con color no vacío', async () => {
     const resultado = await base.pool.query<{ nombre: string; color: string }>(
       'SELECT nombre, color FROM categorias ORDER BY nombre',
     )
     expect(resultado.rows.map((r) => r.nombre).sort()).toEqual(
-      ['Comida', 'Extras', 'Salidas', 'Sin categorizar'].sort(),
+      ['Comida', 'Descartar', 'Extras', 'Salidas', 'Sin categorizar'].sort(),
     )
     for (const fila of resultado.rows) {
       expect(fila.color.length).toBeGreaterThan(0)
@@ -115,7 +115,7 @@ describe('migración de categorias y reglas_categoria', () => {
     const conteoCategorias = await base.pool.query<{ count: string }>(
       'SELECT count(*)::text AS count FROM categorias',
     )
-    expect(conteoCategorias.rows[0]?.count).toBe('4')
+    expect(conteoCategorias.rows[0]?.count).toBe('5')
 
     const conteoReglas = await base.pool.query<{ count: string }>(
       'SELECT count(*)::text AS count FROM reglas_categoria',

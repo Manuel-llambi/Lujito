@@ -30,10 +30,23 @@ export async function obtenerFilasDashboard(
 
   const filas = await repositorioImputaciones.totalesPorMesYCategoria(desde, hasta)
 
-  return filas.map((fila) => ({
-    mes: fila.mes,
-    categoria: fila.categoria,
-    total: Number(fila.total),
-    tieneSinConfirmar: fila.tieneSinConfirmar,
-  }))
+  return filas.map((fila) => {
+    // "Descartar" (trabajo ad hoc, feature "Descartar") ya queda afuera de `vista_gastos_mensuales" —
+    // llegar hasta acá con esa categoría es un estado imposible del pipeline, mismo criterio defensivo
+    // que ya usa `repositorioImputaciones` para categoría nula. El chequeo también es lo que deja a
+    // `NombreCategoria` (cuatro valores, `colorCategoria.ts`) aceptar el `categoria` de abajo sin
+    // ensanchar ese tipo: "Descartar" nunca debe ser una superficie del dashboard.
+    if (fila.categoria === 'Descartar') {
+      throw new Error(
+        'obtenerFilasDashboard: fila con categoría Descartar — la vista ya la excluye, así que ' +
+          'llegar hasta acá es un estado imposible del pipeline',
+      )
+    }
+    return {
+      mes: fila.mes,
+      categoria: fila.categoria,
+      total: Number(fila.total),
+      tieneSinConfirmar: fila.tieneSinConfirmar,
+    }
+  })
 }

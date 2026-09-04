@@ -98,4 +98,46 @@ describe('Corrección de categoría e imputaciones (T50)', () => {
       .sort((a, b) => a.mes.localeCompare(b.mes))
     expect(montosYMesesDespues).toEqual(montosYMesesAntes) // mismos montos, mismos meses
   })
+
+  it('corregir un gasto a Descartar lo saca del total mensual sin tocar sus imputaciones (trabajo ad hoc, feature "Descartar")', async () => {
+    const repositorioEmails = crearRepositorioEmails(base.pool)
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const repositorioImputaciones = crearRepositorioImputaciones(base.pool)
+
+    const { id: emailId } = await repositorioEmails.guardarSiEsNuevo({
+      gmailMessageId: 'msg-t50-descartar',
+      remitente: 'no-responder@banco-ejemplo.com.ar',
+      asunto: 'Pagaste $600,00',
+      headersCrudos: 'From: no-responder@banco-ejemplo.com.ar',
+      cuerpo: '<html></html>',
+      recibidoEn: new Date('2026-08-24T14:20:00.000Z'),
+    })
+    const gasto = await repositorioGastos.crear(datosCompletos(), emailId)
+    await repositorioGastos.asignarCategoria(gasto.id, 'Extras', 'ia', 'justificación del modelo')
+
+    const cuotas = Array.from({ length: 6 }, (_, i) => ({
+      numeroCuota: i + 1,
+      monto: new Decimal('100.00'),
+      mes: `2026-${String(8 + i).padStart(2, '0')}`,
+    }))
+    await repositorioImputaciones.reemplazarPara(gasto.id, cuotas)
+
+    await repositorioGastos.confirmar(gasto.id, 'Descartar') // corrección manual a Descartar
+
+    const filasImputaciones = await base.pool.query<{ numero_cuota: number; monto: string; mes: string }>(
+      'SELECT numero_cuota, monto, mes FROM imputaciones WHERE gasto_id = $1 ORDER BY numero_cuota',
+      [gasto.id],
+    )
+    expect(filasImputaciones.rows).toEqual(
+      cuotas.map((cuota) => ({
+        numero_cuota: cuota.numeroCuota,
+        monto: cuota.monto.toFixed(2),
+        mes: cuota.mes,
+      })),
+    ) // corregir nunca toca imputaciones, tampoco cuando la categoría nueva es Descartar
+
+    const totales = await repositorioImputaciones.totalesPorMesYCategoria('2026-08', '2027-01')
+    expect(totales.filter((f) => f.categoria === 'Extras')).toHaveLength(0) // ya no está en la vieja
+    expect(totales.filter((f) => f.categoria === 'Descartar')).toHaveLength(0) // ni aparece en la nueva
+  })
 })
