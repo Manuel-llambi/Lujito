@@ -26,7 +26,11 @@ interface FilaRegla {
   activa: boolean
 }
 
-export function crearRepositorioReglas(pool: Pool): RepositorioReglas {
+// `Pick<Pool, 'query'>` en vez de `Pool` completo: permite construir este repositorio tanto con el
+// `Pool` compartido de la aplicación como con un `PoolClient` de una transacción (`ejecutarEnTransaccion`,
+// trabajo ad hoc del incidente de atomicidad en `confirmarGasto`/`corregirGasto`) — `PoolClient.query`
+// tiene la misma forma que `Pool.query`, así que ninguna otra parte de este archivo necesita cambiar.
+export function crearRepositorioReglas(pool: Pick<Pool, 'query'>): RepositorioReglas {
   return {
     async listar() {
       const resultado = await pool.query<FilaRegla>(
