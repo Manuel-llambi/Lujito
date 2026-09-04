@@ -2,7 +2,7 @@ import Decimal from 'decimal.js'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { crearBasePostgresDeTest, type BasePostgresDeTest } from '@/infra/db/testUtils/basePostgresDeTest'
 import { crearRepositorioEmails } from '@/infra/db/repositorioEmails'
-import { crearRepositorioGastos, type OrigenCategoria } from '@/infra/db/repositorioGastos'
+import { crearRepositorioGastos, type Gasto, type OrigenCategoria } from '@/infra/db/repositorioGastos'
 import type { GastoNormalizado } from '@/dominio/normalizacion/normalizarAviso'
 
 function datosCompletos(parcial: Partial<GastoNormalizado> = {}): GastoNormalizado {
@@ -195,6 +195,48 @@ describe('RepositorioGastos.crear y la migración de gastos (T18)', () => {
 
     const { aplicarMigraciones } = await import('@/infra/db/migrar')
     await expect(aplicarMigraciones(base.pool)).resolves.not.toThrow()
+  })
+})
+
+describe('RepositorioGastos.crearManual (T2, Req. 4.1)', () => {
+  let base: BasePostgresDeTest
+
+  beforeAll(async () => {
+    base = await crearBasePostgresDeTest()
+  })
+
+  afterAll(async () => {
+    await base.destruir()
+  })
+
+  afterEach(async () => {
+    await base.pool.query('TRUNCATE gastos, emails_crudos CASCADE')
+  })
+
+  it('crea un gasto sin email de origen, ya categorizado por el usuario (Req. 4.1)', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+
+    const gasto: Gasto = await repositorioGastos.crearManual({
+      montoTotal: new Decimal('1234.56'),
+      comercio: 'Kiosco',
+      fechaGasto: new Date('2026-09-03T12:00:00.000Z'),
+      categoria: 'Comida',
+    })
+
+    expect(gasto.emailId).toBeNull()
+    expect(gasto.categoriaOrigen).toBe('usuario')
+    expect(gasto.categoria).toBe('Comida')
+    expect(gasto.estado).toBe('categorizado')
+    expect(gasto.montoTotal?.equals(new Decimal('1234.56'))).toBe(true)
+    expect(gasto.comercio).toBe('Kiosco')
+
+    const fila = await base.pool.query<{ email_id: string | null; estado: string; categoria_origen: string }>(
+      'SELECT email_id, estado, categoria_origen FROM gastos WHERE id = $1',
+      [gasto.id],
+    )
+    expect(fila.rows[0]?.email_id).toBeNull()
+    expect(fila.rows[0]?.estado).toBe('categorizado')
+    expect(fila.rows[0]?.categoria_origen).toBe('usuario')
   })
 })
 

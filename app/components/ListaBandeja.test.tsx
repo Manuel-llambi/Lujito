@@ -3,6 +3,7 @@ import Decimal from 'decimal.js'
 import { render, screen, within, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ListaBandeja } from '@/app/components/ListaBandeja'
+import { CATEGORIAS_CORREGIBLES } from '@/dominio/categorizacion/categorizarPorReglas'
 import type { Gasto } from '@/infra/db/repositorioGastos'
 
 function crearGastoPendiente(parcial: Partial<Gasto> = {}): Gasto {
@@ -114,7 +115,7 @@ describe('ListaBandeja — corregir (Req. 7.4, 7.10, T50)', () => {
     expect(formData.get('categoria')).toBe('Salidas') // elegida, no 'Extras'
   })
 
-  it('el selector ofrece exactamente las tres categorías inferibles, nunca Sin categorizar como opción', () => {
+  it('el selector ofrece exactamente las categorías corregibles (las tres inferibles más Descartar), nunca Sin categorizar como opción', () => {
     const gasto = crearGastoPendiente({ id: 'gasto-1' })
 
     render(<ListaBandeja gastos={[gasto]} onCorregir={vi.fn()} />)
@@ -123,7 +124,7 @@ describe('ListaBandeja — corregir (Req. 7.4, 7.10, T50)', () => {
       .getAllByRole('option')
       .map((opcion) => opcion.getAttribute('value'))
       .filter((valor) => valor !== '')
-    expect(opciones.sort()).toEqual(['Comida', 'Extras', 'Salidas'])
+    expect(opciones.sort()).toEqual([...CATEGORIAS_CORREGIBLES].sort())
   })
 
   it('un gasto con categoría Sin categorizar SÍ ofrece corregir — es su único camino a salir de la bandeja (Req. 7.10)', () => {

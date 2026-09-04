@@ -182,6 +182,20 @@ describe('RepositorioImputaciones.imputacionesDetalladasEntre (trabajo ad hoc /d
     expect(new Set(filas.map((f) => f.mes))).toEqual(new Set(['2026-08', '2026-09']))
   })
 
+  it('un gasto categorizado Descartar queda excluido del detalle (trabajo ad hoc, feature "Descartar")', async () => {
+    const repositorioGastos = crearRepositorioGastos(base.pool)
+    const repositorioImputaciones = crearRepositorioImputaciones(base.pool)
+    const descartado = await crearGasto({ montoTotal: new Decimal('900.00') })
+    await repositorioGastos.asignarCategoria(descartado.id, 'Descartar', 'usuario', null)
+    await repositorioImputaciones.reemplazarPara(descartado.id, [
+      { numeroCuota: 1, monto: new Decimal('900.00'), mes: '2026-08' },
+    ])
+
+    const filas = await repositorioImputaciones.imputacionesDetalladasEntre('2026-08', '2026-08')
+
+    expect(filas).toEqual([])
+  })
+
   it('un rango sin imputaciones devuelve un arreglo vacío, no un error', async () => {
     const repositorioImputaciones = crearRepositorioImputaciones(base.pool)
 

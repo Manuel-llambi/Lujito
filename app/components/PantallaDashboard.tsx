@@ -6,6 +6,8 @@ import type { FilaImputacionDetallada } from '@/app/components/desgloseBucket'
 import { TopAppBar } from '@/app/components/TopAppBar'
 import { BottomNavBar } from '@/app/components/BottomNavBar'
 import { BannerPendientes } from '@/app/components/BannerPendientes'
+import { BotonAgregarGastoFlotante } from '@/app/components/BotonAgregarGastoFlotante'
+import { ModalNuevoGasto } from '@/app/components/ModalNuevoGasto'
 import { TarjetaGrafico, type Granularidad, type TipoGrafico } from '@/app/components/TarjetaGrafico'
 import { SeccionCategorias } from '@/app/components/SeccionCategorias'
 import { resolverDesgloseMes } from '@/app/components/resolverDesgloseMes'
@@ -47,6 +49,10 @@ export function PantallaDashboard({
   const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico>('barras')
   const [granularidad, setGranularidad] = useState<Granularidad>('mes')
   const [categoriaExpandida, setCategoriaExpandida] = useState<NombreCategoria | null>(null)
+  // Alta manual (T6, Req. 1.1, 1.2): estado local puro de React — el FAB solo dispara la apertura,
+  // `ModalNuevoGasto` (T5) es quien conoce `crearGastoManual`. Sin `<Link>` ni `router.push`: abrir y
+  // cerrar el modal nunca navega a otra URL.
+  const [nuevoGastoAbierto, setNuevoGastoAbierto] = useState(false)
 
   const mesFoco = mesesOrdenados[focoIndex] ?? null
   const desgloseFoco = mesFoco ? resolverDesgloseMes(filas, filasDetalladas, mesFoco) : null
@@ -129,6 +135,9 @@ export function PantallaDashboard({
       </main>
 
       <BottomNavBar cantidadPendientes={cantidadPendientes} activa="inicio" />
+
+      <BotonAgregarGastoFlotante onAbrir={() => setNuevoGastoAbierto(true)} />
+      <ModalNuevoGasto abierto={nuevoGastoAbierto} onCerrar={() => setNuevoGastoAbierto(false)} />
     </div>
   )
 }

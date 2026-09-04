@@ -23,12 +23,22 @@ export async function obtenerFilasDetalladas(
 
   const filas = await repositorioImputaciones.imputacionesDetalladasEntre(desde, hasta)
 
-  return filas.map((fila) => ({
-    mes: fila.mes,
-    categoria: fila.categoria,
-    monto: Number(fila.monto),
-    fechaGasto: fila.fechaGasto,
-    comercio: fila.comercio,
-    tieneSinConfirmar: fila.tieneSinConfirmar,
-  }))
+  return filas.map((fila) => {
+    // Mismo criterio defensivo que `obtenerFilasDashboard` (trabajo ad hoc, feature "Descartar"): la
+    // consulta ya excluye "Descartar", así que verla acá es un estado imposible del pipeline.
+    if (fila.categoria === 'Descartar') {
+      throw new Error(
+        'obtenerFilasDetalladas: fila con categoría Descartar — la consulta ya la excluye, así que ' +
+          'llegar hasta acá es un estado imposible del pipeline',
+      )
+    }
+    return {
+      mes: fila.mes,
+      categoria: fila.categoria,
+      monto: Number(fila.monto),
+      fechaGasto: fila.fechaGasto,
+      comercio: fila.comercio,
+      tieneSinConfirmar: fila.tieneSinConfirmar,
+    }
+  })
 }

@@ -121,9 +121,10 @@ export function crearRepositorioImputaciones(pool: Pool): RepositorioImputacione
     },
 
     // Mismo filtro que `vista_gastos_mensuales` (`g.estado <> 'needs_review'`, LEFT JOIN a
-    // `categorias`) pero sin el `GROUP BY` — una fila por imputación, no un total. Query nueva contra
-    // `imputaciones JOIN gastos JOIN categorias` en vez de leer la vista: la vista ya perdió el detalle
-    // por fila al agregar (Decision log de esta tarea ad hoc).
+    // `categorias`, y la exclusión de "Descartar" que agregó 0008_vista_excluye_descartados.sql —
+    // trabajo ad hoc, feature "Descartar") pero sin el `GROUP BY` — una fila por imputación, no un
+    // total. Query nueva contra `imputaciones JOIN gastos JOIN categorias` en vez de leer la vista: la
+    // vista ya perdió el detalle por fila al agregar (Decision log de esta tarea ad hoc).
     async imputacionesDetalladasEntre(desde, hasta) {
       const resultado = await pool.query<{
         mes: string
@@ -138,7 +139,7 @@ export function crearRepositorioImputaciones(pool: Pool): RepositorioImputacione
         FROM imputaciones i
         JOIN gastos g ON g.id = i.gasto_id
         LEFT JOIN categorias c ON c.id = g.categoria_id
-        WHERE g.estado <> 'needs_review' AND i.mes BETWEEN $1 AND $2
+        WHERE g.estado <> 'needs_review' AND c.nombre IS DISTINCT FROM 'Descartar' AND i.mes BETWEEN $1 AND $2
         ORDER BY i.mes ASC, g.fecha_gasto ASC
         `,
         [desde, hasta],

@@ -1,4 +1,4 @@
-import { CATEGORIAS_INFERIBLES } from '@/dominio/categorizacion/categorizarPorReglas'
+import { CATEGORIAS_CORREGIBLES } from '@/dominio/categorizacion/categorizarPorReglas'
 import type { Gasto } from '@/infra/db/repositorioGastos'
 import { CLASE_COLOR_CATEGORIA } from '@/app/tokens/colorCategoria'
 
@@ -131,7 +131,7 @@ export function ListaBandeja({
                       <option value="" disabled>
                         Elegir categoría
                       </option>
-                      {CATEGORIAS_INFERIBLES.map((categoria) => (
+                      {CATEGORIAS_CORREGIBLES.map((categoria) => (
                         <option key={categoria} value={categoria}>
                           {categoria}
                         </option>

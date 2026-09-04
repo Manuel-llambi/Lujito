@@ -1,8 +1,23 @@
-export type Categoria = 'Salidas' | 'Comida' | 'Extras' | 'Sin categorizar'
+export type Categoria = 'Salidas' | 'Comida' | 'Extras' | 'Sin categorizar' | 'Descartar'
 
 // Categorías que la regla o la IA pueden asignar de verdad. "Sin categorizar" es el destino de
-// falla de la inferencia (Req. 6.1) — nunca algo que una regla asigne (Req. 5.1).
+// falla de la inferencia (Req. 6.1) — nunca algo que una regla asigne (Req. 5.1). "Descartar" queda
+// afuera a propósito: es un destino exclusivamente manual (trabajo ad hoc, feature "Descartar"), así
+// que ni una regla ni la IA pueden proponerlo — solo un humano lo elige al corregir en /bandeja.
 export const CATEGORIAS_INFERIBLES = ['Salidas', 'Comida', 'Extras'] as const
+
+// Categorías que un humano puede elegir manualmente al corregir un gasto en /bandeja (trabajo ad
+// hoc, feature "Descartar"). Superset de `CATEGORIAS_INFERIBLES` más "Descartar": a diferencia de
+// esa lista, esta SÍ incluye el destino manual-only, porque el selector de corrección ofrece una
+// opción que una regla o la IA nunca podrían haber propuesto solas. "Sin categorizar" sigue sin
+// aparecer en ninguna de las dos: no es algo que se elija, es la ausencia de propuesta.
+export const CATEGORIAS_CORREGIBLES = [...CATEGORIAS_INFERIBLES, 'Descartar'] as const
+
+// Categorías ofrecidas por el `<select>` del alta manual (Req. 2.4, 2.5, spec
+// `2026-09-03-alta-manual-de-gastos`): mismo conjunto que `CATEGORIAS_INFERIBLES` — un alta manual
+// nunca puede terminar en "Sin categorizar" (el usuario siempre elige) ni en "Descartar" (destino
+// exclusivo de la corrección en /bandeja). Alias deliberado, no un array nuevo.
+export const CATEGORIAS_MANUAL = CATEGORIAS_INFERIBLES
 
 export interface Regla {
   id: string

@@ -73,3 +73,52 @@ export function IconoHabitos({ className }: { className?: string }) {
     </svg>
   )
 }
+
+/** Íconos agregados para el restyle de `ModalNuevoGasto`/`BotonAgregarGastoFlotante` (mockup Stitch
+ * "Dashboard con Modal Agregar Gasto Manual"), mismo patrón que los de arriba: SVG inline propio,
+ * `viewBox="0 0 20 20"`, `currentColor`, `aria-hidden="true"` — nunca Material Symbols. */
+
+export function IconoTienda({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className={className} aria-hidden="true">
+      <path d="M3 8.5V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5" strokeLinejoin="round" />
+      <path d="M2.5 8.5 4 3h12l1.5 5.5" strokeLinejoin="round" />
+      <path d="M2.5 8.5a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0" strokeLinejoin="round" />
+      <path d="M8 17v-4.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V17" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function IconoCerrar({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
+      <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function IconoCheck({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
+      <path d="M4 10.5l4 4 8-8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function IconoCalendario({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className={className} aria-hidden="true">
+      <rect x="3" y="4" width="14" height="13" rx="1.5" />
+      <path d="M3 8h14" />
+      <path d="M6.5 2.5v3M13.5 2.5v3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function IconoMas({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
+      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}

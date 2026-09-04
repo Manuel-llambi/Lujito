@@ -9,7 +9,8 @@
     "start": "next start -p 3100",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:migrate": "node infra/db/aplicarMigracionesCli.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
