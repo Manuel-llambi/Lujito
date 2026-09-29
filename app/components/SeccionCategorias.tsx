@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { CLASE_COLOR_CATEGORIA, type NombreCategoria } from '@/app/tokens/colorCategoria'
 import { formatearMoneda } from '@/app/tokens/formatoMoneda'
 import { formatearFechaCorta } from '@/app/tokens/formatoMes'
@@ -13,6 +14,9 @@ import type { DesgloseCategoria } from '@/app/components/resolverDesgloseMes'
  * no de los agregados de `obtenerFilasDashboard` (Req. 9.1, que sigue siendo solo totales). Sin badge
  * "Inferido" del mockup: esta reconstrucción no tiene ese dato por gasto, solo el flag agregado de
  * "sin confirmar" de la categoría completa.
+ *
+ * El switch %/monto junto al título es estado propio del componente (no viene de `PantallaDashboard`):
+ * es una preferencia puramente visual, no afecta qué se expande ni qué se pide al padre.
  */
 export function SeccionCategorias({
   categorias,
@@ -23,13 +27,36 @@ export function SeccionCategorias({
   expandida: NombreCategoria | null
   onToggle: (categoria: NombreCategoria) => void
 }) {
+  const [mostrarMonto, setMostrarMonto] = useState(false)
+
   if (categorias.length === 0) {
     return null
   }
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="px-1 text-sm font-semibold text-texto">Categorías</h3>
+      <div className="flex items-center justify-between px-1">
+        <h3 className="text-sm font-semibold text-texto">Categorías</h3>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={mostrarMonto}
+          data-testid="switch-valor-categorias"
+          onClick={() => setMostrarMonto((valor) => !valor)}
+          className="flex items-center gap-2 text-xs font-medium text-texto-muted"
+        >
+          <span>{mostrarMonto ? 'Monto' : '%'}</span>
+          <span
+            className={`relative inline-block h-5 w-9 rounded-full transition-colors ${mostrarMonto ? 'bg-acento' : 'bg-texto-muted/25'}`}
+          >
+            <span
+              className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-superficie shadow transition-transform ${
+                mostrarMonto ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </span>
+        </button>
+      </div>
       <div className="flex flex-col gap-2">
         {categorias.map((item) => {
           const abierta = expandida === item.categoria
@@ -49,7 +76,9 @@ export function SeccionCategorias({
                   <div className={`h-2.5 w-2.5 rounded-full ${CLASE_COLOR_CATEGORIA[item.categoria]}`} />
                   <span className="text-sm font-semibold text-texto">
                     {item.categoria}
-                    <span className="ml-1 font-normal text-texto-muted">({item.pct}%)</span>
+                    <span className="ml-1 font-normal text-texto-muted">
+                      ({mostrarMonto ? formatearMoneda(item.total) : `${item.pct}%`})
+                    </span>
                   </span>
                 </div>
                 <IconoChevron direccion={abierta ? 'arriba' : 'abajo'} className="h-4 w-4 text-texto-muted" />

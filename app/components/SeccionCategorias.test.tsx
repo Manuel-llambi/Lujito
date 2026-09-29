@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { SeccionCategorias } from '@/app/components/SeccionCategorias'
 import type { DesgloseCategoria } from '@/app/components/resolverDesgloseMes'
@@ -71,5 +71,19 @@ describe('SeccionCategorias', () => {
     render(<SeccionCategorias categorias={conComercioNulo} expandida="Extras" onToggle={vi.fn()} />)
 
     expect(within(screen.getByTestId('categoria-detalle-Extras')).getByText('Comercio sin identificar')).toBeInTheDocument()
+  })
+
+  it('el switch %/monto arranca en % y, al activarlo, cambia el valor mostrado junto a cada categoría a su total en pesos', () => {
+    render(<SeccionCategorias categorias={CATEGORIAS} expandida={null} onToggle={vi.fn()} />)
+
+    const switchValor = screen.getByTestId('switch-valor-categorias')
+    expect(switchValor).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByTestId('categoria-toggle-Comida')).toHaveTextContent('75%')
+
+    fireEvent.click(switchValor)
+
+    expect(switchValor).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByTestId('categoria-toggle-Comida')).toHaveTextContent('$ 750,00')
+    expect(screen.getByTestId('categoria-toggle-Salidas')).toHaveTextContent('$ 250,00')
   })
 })
